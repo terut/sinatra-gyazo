@@ -8,12 +8,6 @@ require 'sdbm'
 module Sinatra
   module Gyazo
     module Helpers
-      def host(request)
-        host = "#{request.scheme}://#{request.host}"
-        host << ":#{request.port}" unless request.port == 80
-        host
-      end
-
       def image_path(image_dir, data)
         hash = Digest::MD5.hexdigest(data + Time.now.to_s).to_s
         year = Date.today.year
@@ -35,23 +29,28 @@ module Sinatra
         app.set :image_dir, 'images'
 
         app.post '/gyazo' do
-          data = request[:imagedata][:tempfile].read
+          data = params[:imagedata][:tempfile].read
 
-          image_path = image_path(settings.image_dir, data)
-          while File.exists?("#{settings.public_folder}/#{image_path}")
+          begin
             image_path = image_path(settings.image_dir, data)
-          end
+          end while File.exists?("#{settings.public_folder}/#{image_path}")
 
           directory = "#{settings.public_folder}/#{image_path.dirname}"
           FileUtils.mkdir_p(directory, mode: 0755)
 
-          # TODO have to store?
-          id = request[:id]
+          File.open("#{settings.public_folder}/#{image_path}", 'w'){|f| f.write(data)}
+
+          id = params[:id]
+          unless id && id != ""
+            id = Digest::MD5.hexdigest(request.ip + Time.now.to_s)
+            headers "X-Gyazo-Id" => id
+          end
+
           dbm = SDBM.open(settings.dbm_path, 0644)
           dbm[image_path.to_s] = id
+          dbm.close
 
-          File.open("#{settings.public_folder}/#{image_path}", 'w'){|f| f.write(data)}
-          "#{host(request)}/#{image_path}"
+          "#{request.scheme}://#{request.host_with_port}/#{image_path}"
         end
       end
     end
