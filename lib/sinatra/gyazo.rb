@@ -46,7 +46,7 @@ module Sinatra
             headers "X-Gyazo-Id" => id
           end
 
-          dbm = SDBM.open(settings.dbm_path, 0644)
+          dbm = SDBM.open("#{settings.root}/#{settings.dbm_path}", 0644)
           dbm[image_path.to_s] = id
           dbm.close
 
