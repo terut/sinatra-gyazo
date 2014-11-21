@@ -8,11 +8,11 @@ require 'sdbm'
 module Sinatra
   module Gyazo
     module Helpers
-      def image_path(image_dir, data)
+      def image_path(image_dir, data, ext)
         hash = Digest::MD5.hexdigest(data + Time.now.to_s).to_s
         year = Date.today.year
 
-        Pathname.new("#{image_dir}/#{year}/#{section(hash)}/#{hash}.png")
+        Pathname.new("#{image_dir}/#{year}/#{section(hash)}/#{hash}#{ext}")
       end
 
       private
@@ -30,9 +30,10 @@ module Sinatra
 
         app.post '/gyazo' do
           data = params[:imagedata][:tempfile].read
+          ext = params[:imagedata][:type] == 'image/gif' ? '.gif' : '.png'
 
           begin
-            image_path = image_path(settings.image_dir, data)
+            image_path = image_path(settings.image_dir, data, ext)
           end while File.exists?("#{settings.public_folder}/#{image_path}")
 
           directory = "#{settings.public_folder}/#{image_path.dirname}"
